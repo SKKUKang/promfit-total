@@ -1,0 +1,64 @@
+/* ───────── About page ───────── */
+.about-container {}
+
+.about-card {}
+
+.about-logo {
+    height: 100px;
+    display: block;
+    margin: 0 auto;
+}
+
+@media (max-width: 640px) and (hover: none) and (pointer: coarse) {
+    .about-container {
+        padding: 24px 16px !important;
+    }
+
+    .about-card {
+        padding: 24px !important;
+    }
+
+    .about-logo {
+        height: 56px !important;
+        max-width: 90%;
+    }
+}
+
+/* ───────── SideMenu ───────── */
+.side-menu {}
+
+.region-btn {}
+
+.overlay-grid {}
+
+/* ── 모바일(≤640px)에서만 축소/재배치 ───────────────── */
+@media (max-width: 640px) and (hover: none) and (pointer: coarse) {
+    .side-menu {
+        left: 8px !important;
+        top: 72px !important;
+        width: 260px !important;
+        padding: 12px !important;
+        border-radius: 10px !important;
+    }
+
+    .region-row {
+        gap: 6px !important;
+        flex-wrap: wrap;
+    }
+
+    .region-btn {
+        width: 100% !important;
+        font-size: 14px !important;
+        padding: 8px 6px !important;
+    }
+
+    .overlay-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px !important;
+    }
+
+    .analyze-btn {
+        padding: 8px 10px !important;
+        font-weight: 600;
+    }
+}

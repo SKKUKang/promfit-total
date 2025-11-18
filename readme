@@ -1,0 +1,6 @@
+promfit 통합 코드
+
+backend: flask, gunicorn으로 서빙
+frontend: react
+
+https://promfit.ddns.net/ 로 접속해 실행
