@@ -7,6 +7,13 @@ import ResultSection from '../components/ResultSection';
 import './home.css';
 import { API_BASE } from '../config';
 import { useAuthenticator } from '@aws-amplify/ui-react';
+import { fetchAuthSession } from "aws-amplify/auth";
+
+async function getIdToken() {
+  const session = await fetchAuthSession();
+  return session.tokens?.idToken?.toString() || null;
+}
+
 
 export default function Home() {
   const [viewState, setViewState] = useState('idle');
@@ -15,7 +22,19 @@ export default function Home() {
   
   const { authStatus, user } = useAuthenticator(context => [context.authStatus, context.user]);
   // 1. 토큰 추출 헬퍼 함수를 통해 Access Token을 안전하게 가져옴
-  const token = user?.getSignInUserSession?.()?.getIdToken?.()?.getJwtToken?.() || null; 
+const [token, setToken] = useState(null);
+
+useEffect(() => {
+  async function loadToken() {
+    if (authStatus === 'authenticated') {
+      const idToken = await getIdToken();
+      setToken(idToken);
+    } else {
+      setToken(null);
+    }
+  }
+  loadToken();
+}, [authStatus]);
 
   // 2. callPromptAPI 함수를 Home 컴포넌트 안에서 정의하고 token을 인수로 받도록 변경
   //    (또는 인수로 받지 않고 내부의 token 변수를 사용하도록 함수 정의)
@@ -24,9 +43,9 @@ export default function Home() {
     const API_URL = `${API_BASE}/api/prompt`;
 
     // 3. API 호출 전에 token 유무 재확인 (handleSubmit에서 이미 하지만 안전장치)
-    // if (!token) {
-    //   throw new Error("로그인이 필요합니다. 토큰이 없습니다.");
-    // }
+    if (!token) {
+      throw new Error("로그인이 필요합니다. 토큰이 없습니다.");
+    }
 
     const res = await fetch(API_URL, {
       method: 'POST',
@@ -34,10 +53,10 @@ export default function Home() {
       body: JSON.stringify({ prompt, framework }),
     });
     
-    // if (res.status === 401) {
-    //   alert("로그인이 만료되었거나 로그인이 필요합니다.");
-    //   throw new Error("401 Unauthorized: 로그인 필요"); // 에러를 던져서 catch 블록으로 전달
-    // }
+    if (res.status === 401) {
+      alert("로그인이 만료되었거나 로그인이 필요합니다.");
+      throw new Error("401 Unauthorized: 로그인 필요"); // 에러를 던져서 catch 블록으로 전달
+    }
 
     const data = await res.json();
     if (!res.ok) {
@@ -120,10 +139,10 @@ export default function Home() {
     if (!inputText.trim()) return;
     
     // 6. [핵심 수정] 제출 전 로그인 상태 확인
-    // if (authStatus !== 'authenticated' || !token) {
-    //     alert("로그인이 필요합니다.");
-    //     return;
-    // }
+    if (authStatus !== 'authenticated' || !token) {
+        alert("로그인이 필요합니다.");
+        return;
+    }
 
     setViewState('loading');
 

@@ -16,70 +16,70 @@ CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 # # ==========================================
 # # [설정] AWS Cognito 정보 입력
 # # ==========================================
-# AWS_REGION = 'ap-northeast-2'
-# USER_POOL_ID = 'ap-northeast-2_uV8vEmX2v'  # 여기에 실제 User Pool ID 입력
-# APP_CLIENT_ID = '3ihbvo5jfqieb0pkio2slmvuds'    # 여기에 실제 App Client ID 입력
+AWS_REGION = 'ap-northeast-2'
+USER_POOL_ID = 'ap-northeast-2_uV8vEmX2v'  # 여기에 실제 User Pool ID 입력
+APP_CLIENT_ID = '3ihbvo5jfqieb0pkio2slmvuds'    # 여기에 실제 App Client ID 입력
 
 # # Cognito 공개키(JWKS) URL 생성
-# JWKS_URL = f"https://cognito-idp.{AWS_REGION}.amazonaws.com/{USER_POOL_ID}/.well-known/jwks.json"
+JWKS_URL = f"https://cognito-idp.{AWS_REGION}.amazonaws.com/{USER_POOL_ID}/.well-known/jwks.json"
 
 # # ==========================================
 # # [핵심] 토큰 검증 데코레이터 (라이브러리 대체)
 # # ==========================================
-# def get_cognito_public_keys():
-#     """AWS에서 공개키 목록을 가져옵니다."""
-#     try:
-#         response = requests.get(JWKS_URL)
-#         return response.json()['keys']
-#     except Exception as e:
-#         print(f"키 가져오기 실패: {e}")
-#         return []
+def get_cognito_public_keys():
+    """AWS에서 공개키 목록을 가져옵니다."""
+    try:
+        response = requests.get(JWKS_URL)
+        return response.json()['keys']
+    except Exception as e:
+        print(f"키 가져오기 실패: {e}")
+        return []
 
 # # 서버 시작 시 키를 미리 받아옵니다 (속도 향상)
-# COGNITO_KEYS = get_cognito_public_keys()
+COGNITO_KEYS = get_cognito_public_keys()
 
-# def login_required(f):
-#     @wraps(f)
-#     def decorated_function(*args, **kwargs):
-#         token = None
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = None
         
 #         # 1. 헤더에서 토큰 추출
-#         if 'Authorization' in request.headers:
-#             auth_header = request.headers['Authorization']
-#             if auth_header.startswith("Bearer "):
-#                 token = auth_header.split(" ")[1]
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            if auth_header.startswith("Bearer "):
+                token = auth_header.split(" ")[1]
         
-#         if not token:
-#             print("토큰이 없습니다. 로그인이 필요합니다.")
-#             return jsonify({'message': '토큰이 없습니다. 로그인이 필요합니다.'}), 401
+        if not token:
+            print("토큰이 없습니다. 로그인이 필요합니다.")
+            return jsonify({'message': '토큰이 없습니다. 로그인이 필요합니다.'}), 401
 
-#         try:
+        try:
 #             # 2. 토큰의 헤더 분석 (kid 찾기)
-#             header = jwt.get_unverified_header(token)
-#             kid = header['kid']
+            header = jwt.get_unverified_header(token)
+            kid = header['kid']
             
 #             # 3. 맞는 공개키 찾기
-#             key = next(k for k in COGNITO_KEYS if k['kid'] == kid)
+            key = next(k for k in COGNITO_KEYS if k['kid'] == kid)
             
 #             # 4. 토큰 검증 (서명, 만료시간, Client ID 확인)
-#             public_key = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
-#             payload = jwt.decode(token, public_key, algorithms=['RS256'], audience=APP_CLIENT_ID)
+            public_key = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
+            payload = jwt.decode(token, public_key, algorithms=['RS256'], audience=APP_CLIENT_ID)
             
 #             # 5. 성공 시 사용자 정보를 전역 변수 g에 저장
-#             g.user_email = payload.get('email') # 이메일 저장
+            g.user_email = payload.get('email') # 이메일 저장
             
-#         except StopIteration:
-#             print("Invalid key ID")
-#             return jsonify({'message': '유효하지 않은 키 ID입니다.'}), 401
-#         except jwt.ExpiredSignatureError:
-#             print("Token has expired")
-#             return jsonify({'message': '토큰이 만료되었습니다. 다시 로그인하세요.'}), 401
-#         except Exception as e:
-#             print(f"Token Error: {e}")
-#             return jsonify({'message': '토큰이 유효하지 않습니다.'}), 401
+        except StopIteration:
+            print("Invalid key ID")
+            return jsonify({'message': '유효하지 않은 키 ID입니다.'}), 401
+        except jwt.ExpiredSignatureError:
+            print("Token has expired")
+            return jsonify({'message': '토큰이 만료되었습니다. 다시 로그인하세요.'}), 401
+        except Exception as e:
+            print(f"Token Error: {e}")
+            return jsonify({'message': '토큰이 유효하지 않습니다.'}), 401
 
-#         return f(*args, **kwargs)
-#     return decorated_function
+        return f(*args, **kwargs)
+    return decorated_function
 
 # # ==========================================
 
@@ -105,7 +105,7 @@ class FrameworkPromptExecutor:
 executor = FrameworkPromptExecutor(db_path="prompts.db")
 
 @app.route("/api/prompt", methods=["POST"])
-
+@login_required
 def generate_prompt():
     data = request.get_json()
     user_question = data.get("prompt")
@@ -137,17 +137,17 @@ def list_frameworks():
 
 
 @app.route("/api/frameworks", methods=["POST"])
-
+@login_required
 def create_framework():
     # 토큰에서 추출한 이메일 사용
-    #current_user_email = g.user_email 
+    current_user_email = g.user_email 
 
     data = request.get_json()
     framework_name = data.get("framework")
     prompt_text = data.get("prompt_text")
     description = data.get("description")
     
-    #author = current_user_email 
+    author = current_user_email 
 
     if not framework_name or not prompt_text:
         return jsonify({"error": "framework와 prompt_text 모두 필요합니다"}), 400
@@ -171,7 +171,7 @@ def create_framework():
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/frameworks", methods=["DELETE"])
-
+@login_required
 def delete_framework():
     data = request.get_json()
     framework_name = data.get("framework")

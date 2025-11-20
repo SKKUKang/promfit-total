@@ -10,6 +10,20 @@ import NavBar from "../components/navBar";
 import "./home.css"; // 모노톤 변수 재사용
 import { API_BASE } from "../config";
 import { useAuthenticator } from '@aws-amplify/ui-react';
+import { fetchAuthSession } from 'aws-amplify/auth';
+
+
+async function getIdToken() {
+  try {
+    const session = await fetchAuthSession();
+    return session?.tokens?.idToken?.toString() || null;
+  } catch (err) {
+    console.error("Failed to fetch ID token:", err);
+    return null;
+  }
+}
+
+
 const NAME_LIMIT = 10;
 const CORE_FRAMEWORKS = new Set(["RTF", "TAG", "BAB", "CARE", "CO_STAR"]); // 삭제 불가 목록
 
@@ -29,7 +43,22 @@ export default function Library() {
 
   // auth token (AWS Cognito)
   const { authStatus, user } = useAuthenticator(context => [context.authStatus, context.user]);
-  const token = user?.getSignInUserSession?.()?.getIdToken?.()?.getJwtToken?.() || null;
+const [token, setToken] = useState(null);
+
+useEffect(() => {
+  async function loadToken() {
+    if (authStatus === 'authenticated') {
+      const idToken = await getIdToken();
+      setToken(idToken);
+    } else {
+      setToken(null);
+    }
+  }
+  loadToken();
+}, [authStatus]);
+
+  
+
 
   // 모달 내 첫 입력 자동 포커스
   const nameInputRef = useRef(null);
@@ -91,7 +120,7 @@ export default function Library() {
       isMounted = false;
       controller.abort();
     };
-  }, []);
+  }, [token]);
 
   // 간단 검색(이름/설명)
   const filtered = useMemo(() => {
@@ -178,10 +207,10 @@ export default function Library() {
           description: fwDesc,
         }),
       });
-    //           if (res.status === 401) {
-    //   alert("로그인이 만료되었거나 로그인이 필요합니다.");
-    //   return;
-    // }
+              if (res.status === 401) {
+      alert("로그인이 만료되었거나 로그인이 필요합니다.");
+      return;
+    }
 
       const ct = res.headers.get("content-type") || "";
       const body = ct.includes("application/json")
@@ -236,10 +265,10 @@ export default function Library() {
         },
         body: JSON.stringify({ framework: name }),
       });
-    //   if (res.status === 401) {
-    //   alert("로그인이 만료되었거나 로그인이 필요합니다.");
-    //   return;
-    // }
+      if (res.status === 401) {
+      alert("로그인이 만료되었거나 로그인이 필요합니다.");
+      return;
+    }
 
       const ct = res.headers.get("content-type") || "";
       const body = ct.includes("application/json")
@@ -260,7 +289,7 @@ export default function Library() {
       console.error("[Library] DELETE error:", e);
       alert(e.message || "삭제 중 오류가 발생했습니다.");
     }
-  }, []);
+  }, [token]);
 
   // 모달 내부에서 Ctrl/Cmd+Enter로 저장
   const handleFormKeyDown = useCallback(
