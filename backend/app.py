@@ -182,10 +182,20 @@ def delete_framework():
     try:
         conn = sqlite3.connect("prompts.db")
         cursor = conn.cursor()
-        cursor.execute("SELECT 1 FROM framework_prompts WHERE framework = ?", (framework_name,))
-        if not cursor.fetchone():
+        # 확인: 프레임워크 존재 여부 및 작성자 조회
+        cursor.execute("SELECT author FROM framework_prompts WHERE framework = ?", (framework_name,))
+        row = cursor.fetchone()
+        if not row:
             conn.close()
             return jsonify({"error": f"'{framework_name}' 프레임워크는 존재하지 않습니다"}), 404
+
+        db_author = row[0]
+        current_user_email = getattr(g, 'user_email', None)
+
+        # 작성자 검사: 작성자와 현재 요청자의 이메일이 같아야 삭제 가능
+        if not current_user_email or str(db_author).lower() != str(current_user_email).lower():
+            conn.close()
+            return jsonify({"error": "삭제 권한이 없습니다. 작성자만 삭제할 수 있습니다."}), 403
 
         cursor.execute("DELETE FROM framework_prompts WHERE framework = ?", (framework_name,))
         conn.commit()

@@ -57,6 +57,9 @@ useEffect(() => {
   loadToken();
 }, [authStatus]);
 
+  // 현재 로그인한 사용자의 이메일 (없으면 null)
+  const currentUserEmail = user?.signInDetails?.loginId || null;
+
   
 
 
@@ -362,30 +365,33 @@ useEffect(() => {
                       >
                         <h3 className="lib-card-title">{fw.framework}</h3>
 
-                        {/* 삭제 버튼 (기본 프레임워크는 비활성화) */}
-                        <button
-                          type="button"
-                          className="lib-del-btn"
-                          onClick={() => handleDelete(fw.framework)}
-                          disabled={protectedFw}
-                          title={
-                            protectedFw
-                              ? "기본 프레임워크는 삭제할 수 없습니다"
-                              : "삭제"
-                          }
-                          style={{
-                            cursor: protectedFw ? "not-allowed" : "pointer",
-                            opacity: protectedFw ? 0.4 : 1,
-                            background: "transparent",
-                            border: "1px solid var(--line)",
-                            color: "var(--muted)",
-                            borderRadius: 8,
-                            padding: "4px 8px",
-                            fontSize: 13,
-                          }}
-                        >
-                          🗑️
-                        </button>
+                                {/* 삭제 버튼: 작성자가 아니면 표시하지 않음 */}
+                                {(() => {
+                                  const isOwner =
+                                    currentUserEmail &&
+                                    String(fw.author || "").toLowerCase() ===
+                                      String(currentUserEmail).toLowerCase();
+                                  if (protectedFw || !isOwner) return null;
+                                  return (
+                                    <button
+                                      type="button"
+                                      className="lib-del-btn"
+                                      onClick={() => handleDelete(fw.framework)}
+                                      title="삭제"
+                                      style={{
+                                        cursor: "pointer",
+                                        background: "transparent",
+                                        border: "1px solid var(--line)",
+                                        color: "var(--muted)",
+                                        borderRadius: 8,
+                                        padding: "4px 8px",
+                                        fontSize: 13,
+                                      }}
+                                    >
+                                      🗑️
+                                    </button>
+                                  );
+                                })()}
                       </div>
 
                       <p className="lib-card-desc">
